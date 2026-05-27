@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd); bash \"$ROOT/.codex/hooks/tdd-guard.sh\""
+            "command": "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd); bash \"$ROOT/.claude/hooks/tdd-guard.sh\""
           }
         ]
       }
