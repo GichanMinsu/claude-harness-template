@@ -1,6 +1,6 @@
 ---
 name: review
-description: Use when working in /Users/jaeha/Projects/codex-live-demo and the user asks to review local changes, validate a diff, check project guardrails, or references the former /review command. The review checks AGENTS.md, docs/ARCHITECTURE.md, docs/ADR.md, tests, CRITICAL rules, and buildability.
+description: Use when the user asks to review local changes, validate a diff, check project guardrails, or references the former /review command. The review checks CLAUDE.md, docs/ARCHITECTURE.md, docs/ADR.md, tests, CRITICAL rules, and buildability.
 ---
 
 # Project Review
@@ -11,7 +11,7 @@ Use this skill to review changes in this project against its local contracts.
 
 Before reviewing changes, read:
 
-- `AGENTS.md`
+- `CLAUDE.md`
 - `docs/ARCHITECTURE.md`
 - `docs/ADR.md`
 
@@ -24,7 +24,7 @@ Check these items:
 1. **Architecture compliance**: Do changed files follow the structure defined in `ARCHITECTURE.md`?
 2. **Stack compliance**: Do changes stay within the technical decisions in `ADR.md`?
 3. **Tests**: Are tests present for new behavior?
-4. **CRITICAL rules**: Do changes avoid violating CRITICAL rules in `AGENTS.md`?
+4. **CRITICAL rules**: Do changes avoid violating CRITICAL rules in `CLAUDE.md`?
 5. **Buildability**: Does the build command pass without errors?
 
 Run validation commands when appropriate for the requested review scope. If a command cannot be run, state that clearly in the review.
