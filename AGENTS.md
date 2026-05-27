@@ -6,25 +6,25 @@
 - Tailwind CSS
 - Vitest + React Testing Library
 - YouTube Data API v3
-- OpenAI Responses API + Structured Outputs
+- Anthropic Claude API + Tool Use (Structured Output)
 
 ## 제품 목표
 - 사용자가 YouTube 채널 URL만 입력하면 공개 채널 정보와 최근 업로드 데이터를 수집한다.
-- 수집된 데이터를 ChatGPT API로 분석해 채널 운영자가 다음에 만들 콘텐츠를 결정하도록 돕는다.
+- 수집된 데이터를 Claude API로 분석해 채널 운영자가 다음에 만들 콘텐츠를 결정하도록 돕는다.
 - MVP는 긴 보고서보다 대시보드, 추천 카드, 실행 체크리스트를 우선한다.
 
 ## 아키텍처 규칙
 - CRITICAL: 외부 API 호출은 `src/app/api/**/route.ts`와 server-only service에서만 처리한다.
-- CRITICAL: Client Component에서 YouTube API 또는 OpenAI API를 직접 호출하지 않는다.
+- CRITICAL: Client Component에서 YouTube API 또는 Claude API를 직접 호출하지 않는다.
 - CRITICAL: API key, provider raw error, 내부 stack trace를 클라이언트에 노출하지 않는다.
 - CRITICAL: 데이터 파이프라인은 `collect -> analyze` 경계를 유지한다.
   - `collect`는 YouTube 데이터 수집만 담당한다.
-  - `analyze`는 수집 결과를 받아 OpenAI 분석만 담당한다.
+  - `analyze`는 수집 결과를 받아 Claude 분석만 담당한다.
 - CRITICAL: MVP는 공개 YouTube Data API만 사용한다. YouTube OAuth와 YouTube Analytics API는 사용하지 않는다.
 - 컴포넌트는 `src/components/`에 둔다.
 - 공통 타입은 `src/types/`에 둔다.
 - URL 파싱, metric 계산, validation helper는 `src/lib/`에 둔다.
-- YouTube/OpenAI wrapper는 `src/services/`에 두고 server-only boundary를 유지한다.
+- YouTube/Claude wrapper는 `src/services/`에 두고 server-only boundary를 유지한다.
 
 ## 사용자 플로우 원칙
 - 사용자는 채널 운영자이며, 앱의 핵심 질문은 "다음에 무엇을 만들까?"다.
@@ -48,8 +48,8 @@
 
 ## 환경 변수
 - `YOUTUBE_API_KEY`: YouTube Data API v3 key.
-- `OPENAI_API_KEY`: OpenAI API key.
-- `OPENAI_MODEL`: 선택값. 설정하지 않으면 앱의 기본 비용형 모델을 사용한다.
+- `ANTHROPIC_API_KEY`: Anthropic Claude API key.
+- `CLAUDE_MODEL`: 선택값. 설정하지 않으면 앱의 기본 모델(claude-sonnet-4-6)을 사용한다.
 
 ## 명령어
 ```bash

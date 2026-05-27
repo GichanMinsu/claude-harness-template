@@ -12,7 +12,7 @@ YouTube Channel Insight는 Next.js App Router 기반 단일 웹 앱이다. UI와
 - Recharts
 - Lucide React
 - YouTube Data API v3
-- OpenAI Responses API + Structured Outputs
+- Anthropic Claude API + Tool Use (Structured Output)
 
 ## 디렉토리 구조
 ```text
@@ -22,7 +22,7 @@ src/
 │   └── api/
 │       └── channel/
 │           ├── collect/route.ts      # YouTube 데이터 수집
-│           └── analyze/route.ts      # OpenAI 분석
+│           └── analyze/route.ts      # Claude 분석
 ├── components/
 │   ├── AnalysisShell.tsx             # 입력 -> 수집 -> 분석 -> 결과 상태 orchestration
 │   ├── ChannelInput.tsx
@@ -41,7 +41,7 @@ src/
 │   └── schemas.ts                    # Zod request/response schema
 ├── services/
 │   ├── youtube.ts                    # server-only YouTube wrapper
-│   └── openai.ts                     # server-only OpenAI wrapper
+│   └── claude.ts                     # server-only Claude wrapper
 └── types/
     ├── youtube.ts
     ├── analysis.ts
@@ -63,7 +63,7 @@ src/
   -> YouTube service
   -> normalized collect result
   -> POST /api/channel/analyze
-  -> OpenAI service
+  -> Claude service
   -> structured analysis result
   -> dashboard render
 ```
@@ -79,8 +79,8 @@ src/
   - 영상 통계와 메타데이터 보강.
   - 앱 내부 collect result 형태로 반환.
 - 하지 않는 것:
-  - OpenAI 호출.
-  - GPT prompt 생성.
+  - Claude API 호출.
+  - 분석 prompt 생성.
   - 분석 문장 생성.
 
 ### `POST /api/channel/analyze`
@@ -88,8 +88,8 @@ src/
 - 책임:
   - 수집 결과 schema 검증.
   - 분석용 payload 정규화.
-  - OpenAI Responses API 호출.
-  - Structured Outputs schema로 dashboard JSON 반환.
+  - Claude API Tool Use 호출.
+  - Tool Use input_schema로 dashboard JSON 반환.
 - 하지 않는 것:
   - YouTube API 호출.
   - 채널 URL 재해석.
@@ -104,10 +104,10 @@ src/
 - 숫자 필드가 누락된 경우 0으로 단정하지 않고 nullable로 정규화한다.
 - 공개 영상이 없는 경우 `NO_PUBLIC_VIDEOS`를 반환한다.
 
-## OpenAI 분석 전략
-- OpenAI provider 호출은 `src/services/openai.ts`에서만 수행한다.
-- Responses API를 사용한다.
-- Structured Outputs로 다음 UI 필드를 안정적으로 생성한다:
+## Claude 분석 전략
+- Claude API 호출은 `src/services/claude.ts`에서만 수행한다.
+- Anthropic Messages API + Tool Use를 사용한다.
+- `analyze_channel` tool의 input_schema로 다음 UI 필드를 안정적으로 생성한다:
   - `overallScore`
   - `executiveSummary`
   - `strongSignals`
@@ -116,9 +116,9 @@ src/
   - `recommendedNextVideos`
   - `actionChecklist`
   - `confidence`
-- prompt는 데이터 기반 근거와 AI 추론을 구분하도록 작성한다.
+- system prompt는 데이터 기반 근거와 AI 추론을 구분하도록 작성한다.
 - 분석 언어는 한국어로 고정한다.
-- 모델은 `OPENAI_MODEL` 환경변수를 우선하고, 없으면 앱 기본 비용형 모델을 사용한다.
+- 모델은 `CLAUDE_MODEL` 환경변수를 우선하고, 없으면 `claude-sonnet-4-6`을 사용한다.
 
 ## 상태 관리
 메인 클라이언트 플로우는 다음 상태만 사용한다.
@@ -222,19 +222,19 @@ analysis_failed
 ## 에러 taxonomy
 - `INVALID_CHANNEL_URL`: 지원하지 않는 URL 형식.
 - `MISSING_YOUTUBE_API_KEY`: 서버에 `YOUTUBE_API_KEY`가 없음.
-- `MISSING_OPENAI_API_KEY`: 서버에 `OPENAI_API_KEY`가 없음.
+- `MISSING_CLAUDE_API_KEY`: 서버에 `ANTHROPIC_API_KEY`가 없음.
 - `CHANNEL_NOT_FOUND`: handle/channel ID로 공개 채널을 찾지 못함.
 - `NO_PUBLIC_VIDEOS`: 최근 공개 업로드가 없음.
 - `YOUTUBE_RATE_LIMITED`: YouTube quota 또는 rate limit 실패.
 - `YOUTUBE_PROVIDER_ERROR`: 기타 YouTube provider 실패.
-- `OPENAI_REFUSAL`: OpenAI가 structured analysis를 제공하지 않음.
-- `OPENAI_PROVIDER_ERROR`: 기타 OpenAI provider 실패.
+- `CLAUDE_REFUSAL`: Claude가 structured analysis를 제공하지 않음.
+- `CLAUDE_PROVIDER_ERROR`: 기타 Claude provider 실패.
 
 ## 테스트 전략
 - URL parser와 validation은 unit test를 먼저 작성한다.
 - metric 계산 helper는 unit test로 검증한다.
 - YouTube service는 mocked fetch로 provider 응답과 에러 매핑을 검증한다.
-- OpenAI service는 mocked SDK로 structured output parsing과 실패 처리를 검증한다.
+- Claude service는 mocked client로 tool use parsing과 실패 처리를 검증한다.
 - API route는 missing env, invalid request, provider failure, success path를 검증한다.
 - UI는 입력, 진행 상태, 오류 상태, 대시보드 렌더링을 React Testing Library로 검증한다.
 
@@ -245,7 +245,7 @@ analysis_failed
 - 파일 시스템 persistence에 의존하지 않는다.
 
 ## 로컬 자동화 스크립트
-- `scripts/run-youtube-analysis.mjs`는 Codex/로컬 자동화에서 기존 앱 API route를 재사용하기 위한 CLI다.
+- `scripts/run-youtube-analysis.mjs`는 로컬 자동화에서 기존 앱 API route를 재사용하기 위한 CLI다.
 - 스크립트는 provider SDK 또는 provider endpoint를 직접 호출하지 않고, 실행 중인 앱의 `POST /api/channel/collect`와 `POST /api/channel/analyze`만 호출한다.
 - 기본 명령은 `npm run analyze:youtube -- --channel "@handle"`이다.
 - 결과는 로컬 artifact인 `reports/youtube-analysis/latest.json`과 `reports/youtube-analysis/latest.md`에 기록한다.

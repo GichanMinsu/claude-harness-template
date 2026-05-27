@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
-# TDD Guard Hook — PreToolUse[Edit|Write|apply_patch]
+# TDD Guard Hook — PreToolUse[Edit|Write]
 # Blocks implementation edits when no corresponding test file exists.
-#
-# Based on:
-# https://github.com/jha0313/YOUTUBE/blob/main/harness_demo/scripts/hooks/tdd-guard.sh
-#
-# The source script checks .tool_input.file_path. This version also supports
-# Codex apply_patch input, where changed paths are carried in .tool_input.command.
 
 set -u
 

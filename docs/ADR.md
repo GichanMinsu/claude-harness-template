@@ -8,7 +8,7 @@ MVP는 채널 운영자의 다음 콘텐츠 결정을 돕는 가장 짧은 사�
 ### ADR-001: Next.js App Router 선택
 **결정**: 앱은 Next.js App Router 기반으로 구현한다.
 
-**이유**: 화면, API route, 서버 전용 service를 한 프로젝트에서 관리할 수 있고 로컬 개발과 Vercel 배포 흐름이 단순하다. MVP에서 별도 백엔드 서버를 운영하지 않아도 YouTube/OpenAI 호출을 서버 route 안에 숨길 수 있다.
+**이유**: 화면, API route, 서버 전용 service를 한 프로젝트에서 관리할 수 있고 로컬 개발과 Vercel 배포 흐름이 단순하다. MVP에서 별도 백엔드 서버를 운영하지 않아도 YouTube/Claude 호출을 서버 route 안에 숨길 수 있다.
 
 **트레이드오프**: 프론트엔드와 백엔드가 완전히 분리된 구조보다 경계가 느슨해질 수 있다. 이를 보완하기 위해 외부 API 호출은 route handler와 server-only service로 제한한다.
 
@@ -20,7 +20,7 @@ MVP는 채널 운영자의 다음 콘텐츠 결정을 돕는 가장 짧은 사�
 **트레이드오프**: YouTube Studio/Analytics에서 볼 수 있는 시청 지속 시간, 노출 수, 클릭률, 유입 경로, 수익 데이터는 사용할 수 없다. 따라서 MVP의 분석은 공개 성과 데이터 기반 인사이트로 제한된다.
 
 ### ADR-003: `collect -> analyze` 파이프라인 분리
-**결정**: YouTube 데이터 수집과 OpenAI 분석은 별도 API route와 service로 분리한다.
+**결정**: YouTube 데이터 수집과 Claude 분석은 별도 API route와 service로 분리한다.
 
 **이유**: 수집 실패와 분석 실패를 명확히 구분할 수 있다. AI 분석이 실패해도 수집된 채널/영상 데이터는 UI에 유지할 수 있다. 이후 자동화, 재분석, 저장 기능을 붙일 때도 수집 결과를 독립적으로 재사용할 수 있다.
 
@@ -33,12 +33,12 @@ MVP는 채널 운영자의 다음 콘텐츠 결정을 돕는 가장 짧은 사�
 
 **트레이드오프**: 새로고침하면 결과가 사라지고 과거 분석 비교가 불가능하다. 분석 히스토리, 여러 채널 관리, 리포트 공유는 MVP 이후 기능으로 둔다.
 
-### ADR-005: OpenAI Structured Outputs 사용
-**결정**: OpenAI 분석 결과는 Responses API와 Structured Outputs로 생성한다.
+### ADR-005: Anthropic Claude API Tool Use 사용
+**결정**: 분석 결과는 Anthropic Messages API의 Tool Use로 생성한다.
 
-**이유**: 결과 화면은 대시보드 카드, 차트, 추천 카드, 체크리스트를 렌더링해야 한다. 자유 형식 텍스트보다 구조화된 JSON이 UI 안정성, 테스트, 에러 처리가 좋다.
+**이유**: 결과 화면은 대시보드 카드, 차트, 추천 카드, 체크리스트를 렌더링해야 한다. 자유 형식 텍스트보다 구조화된 JSON이 UI 안정성, 테스트, 에러 처리가 좋다. Tool Use의 `tool_choice: {type: "tool"}`로 schema 준수를 강제한다.
 
-**트레이드오프**: prompt와 schema를 함께 관리해야 하며, schema가 과하게 엄격하면 유효한 분석도 실패할 수 있다. MVP에서는 UI에 필요한 필드만 schema로 고정한다.
+**트레이드오프**: system prompt와 tool input_schema를 함께 관리해야 하며, schema가 과하게 엄격하면 유효한 분석도 실패할 수 있다. MVP에서는 UI에 필요한 필드만 schema로 고정한다.
 
 ### ADR-006: 대시보드 우선 UX
 **결정**: 결과 화면은 긴 리포트보다 대시보드, 차트, 추천 카드, 실행 체크리스트를 우선한다.
