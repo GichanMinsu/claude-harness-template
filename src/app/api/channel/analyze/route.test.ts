@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toErrorResponse } from "@/lib/app-errors";
 import type { ChannelAnalysis } from "@/types/analysis";
 import type { YouTubeCollectResult } from "@/types/youtube";
-import { analyzeChannelData } from "@/services/openai";
+import { analyzeChannelData } from "@/services/claude";
 import { POST } from "./route";
 
-vi.mock("@/services/openai", () => ({
+vi.mock("@/services/claude", () => ({
   analyzeChannelData: vi.fn(),
 }));
 
@@ -94,7 +94,7 @@ describe("POST /api/channel/analyze", () => {
 
     await expect(response.json()).resolves.toMatchObject({
       error: {
-        code: "OPENAI_PROVIDER_ERROR",
+        code: "CLAUDE_PROVIDER_ERROR",
       },
     });
     expect(response.status).toBe(502);
@@ -104,14 +104,14 @@ describe("POST /api/channel/analyze", () => {
   it("maps service errors to sanitized JSON responses", async () => {
     analyzeChannelDataMock.mockResolvedValue({
       ok: false,
-      error: toErrorResponse("OPENAI_REFUSAL", undefined, 502),
+      error: toErrorResponse("CLAUDE_REFUSAL", undefined, 502),
     });
 
     const response = await POST(jsonRequest(collectPayload));
 
     await expect(response.json()).resolves.toEqual({
       error: {
-        code: "OPENAI_REFUSAL",
+        code: "CLAUDE_REFUSAL",
         message: "AI 분석 결과를 생성하지 못했습니다.",
       },
     });

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Harness Step Executor — phase 내 step을 Codex로 순차 실행하고 자가 교정한다.
+Harness Step Executor — phase 내 step을 Claude Code로 순차 실행하고 자가 교정한다.
 
 Usage:
     python3 scripts/execute.py <phase-dir> [--push]
@@ -184,9 +184,11 @@ class StepExecutor:
 
     def _load_guardrails(self) -> str:
         sections = []
-        agents_md = ROOT / "AGENTS.md"
-        if agents_md.exists():
-            sections.append(f"## 프로젝트 규칙 (AGENTS.md)\n\n{agents_md.read_text()}")
+        for fname in ("CLAUDE.md", "AGENTS.md"):
+            md = ROOT / fname
+            if md.exists():
+                sections.append(f"## 프로젝트 규칙 ({fname})\n\n{md.read_text()}")
+                break
         docs_dir = ROOT / "docs"
         if docs_dir.is_dir():
             for doc in sorted(docs_dir.glob("*.md")):
@@ -232,9 +234,9 @@ class StepExecutor:
             f"   {commit_example}\n\n---\n\n"
         )
 
-    # --- Codex 호출 ---
+    # --- Claude Code 호출 ---
 
-    def _invoke_codex(self, step: dict, preamble: str) -> dict:
+    def _invoke_claude(self, step: dict, preamble: str) -> dict:
         step_num, step_name = step["step"], step["name"]
         step_file = self._phase_dir / f"step{step_num}.md"
 
@@ -245,22 +247,18 @@ class StepExecutor:
         prompt = preamble + step_file.read_text()
         result = subprocess.run(
             [
-                "codex",
-                "exec",
-                "--json",
-                "--sandbox",
-                "danger-full-access",
-                "-c",
-                'approval_policy="never"',
-                "--cd",
-                self._root,
+                "claude",
+                "--print",
+                "--dangerously-skip-permissions",
+                "--output-format",
+                "text",
                 prompt,
             ],
             cwd=self._root, capture_output=True, text=True, timeout=1800,
         )
 
         if result.returncode != 0:
-            print(f"\n  WARN: Codex가 비정상 종료됨 (code {result.returncode})")
+            print(f"\n  WARN: Claude Code가 비정상 종료됨 (code {result.returncode})")
             if result.stderr:
                 print(f"  stderr: {result.stderr[:500]}")
 
@@ -325,7 +323,7 @@ class StepExecutor:
                 tag += f" [retry {attempt}/{self.MAX_RETRIES}]"
 
             with progress_indicator(tag) as pi:
-                self._invoke_codex(step, preamble)
+                self._invoke_claude(step, preamble)
                 elapsed = int(pi.elapsed)
 
             index = self._read_json(self._index_file)

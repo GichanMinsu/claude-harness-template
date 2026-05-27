@@ -6,13 +6,13 @@ describe("app errors", () => {
     expect(APP_ERROR_CODES).toEqual([
       "INVALID_CHANNEL_URL",
       "MISSING_YOUTUBE_API_KEY",
-      "MISSING_OPENAI_API_KEY",
+      "MISSING_CLAUDE_API_KEY",
       "CHANNEL_NOT_FOUND",
       "NO_PUBLIC_VIDEOS",
       "YOUTUBE_RATE_LIMITED",
       "YOUTUBE_PROVIDER_ERROR",
-      "OPENAI_REFUSAL",
-      "OPENAI_PROVIDER_ERROR",
+      "CLAUDE_REFUSAL",
+      "CLAUDE_PROVIDER_ERROR",
     ]);
   });
 

@@ -1,5 +1,6 @@
 import "server-only";
 
+import Anthropic from "@anthropic-ai/sdk";
 import { toErrorResponse, type AppErrorResponse } from "@/lib/app-errors";
 import {
   getAverageViewCount,
@@ -13,8 +14,7 @@ import type { ChannelAnalysis } from "@/types/analysis";
 import type { YouTubeCollectResult, YouTubeVideo } from "@/types/youtube";
 import type { CollectChannelDataResult } from "./youtube";
 
-const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
-const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini";
+const DEFAULT_CLAUDE_MODEL = "claude-sonnet-4-6";
 
 export type ChannelAnalysisResult =
   | {
@@ -29,21 +29,7 @@ export type ChannelAnalysisResult =
 interface AnalyzeChannelDataOptions {
   apiKey?: string;
   model?: string;
-  fetchImpl?: typeof fetch;
-}
-
-interface OpenAIResponseBody {
-  output_text?: string;
-  output_parsed?: unknown;
-  output?: Array<{
-    type?: string;
-    content?: Array<{
-      type?: string;
-      text?: string;
-      parsed?: unknown;
-      refusal?: string;
-    }>;
-  }>;
+  client?: Anthropic;
 }
 
 export async function analyzeChannelData(
@@ -57,80 +43,69 @@ export async function analyzeChannelData(
     };
   }
 
-  const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY;
+  const apiKey = options.apiKey ?? process.env.ANTHROPIC_API_KEY;
 
   if (!apiKey) {
     return {
       ok: false,
-      error: toErrorResponse("MISSING_OPENAI_API_KEY"),
+      error: toErrorResponse("MISSING_CLAUDE_API_KEY"),
     };
   }
 
-  const model = options.model ?? process.env.OPENAI_MODEL ?? DEFAULT_OPENAI_MODEL;
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const model = options.model ?? process.env.CLAUDE_MODEL ?? DEFAULT_CLAUDE_MODEL;
+  const client = options.client ?? new Anthropic({ apiKey });
 
   try {
-    const response = await fetchImpl(OPENAI_RESPONSES_URL, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${apiKey}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify(buildOpenAIRequestBody(input.data, model)),
+    const response = await client.messages.create({
+      model,
+      max_tokens: 4096,
+      system: buildSystemPrompt(),
+      tools: [
+        {
+          name: "analyze_channel",
+          description: "YouTube 채널 분석 결과를 구조화된 형식으로 반환합니다.",
+          input_schema: analysisJsonSchema as Anthropic.Tool["input_schema"],
+        },
+      ],
+      tool_choice: { type: "tool", name: "analyze_channel" },
+      messages: [
+        {
+          role: "user",
+          content: JSON.stringify(buildAnalysisInput(input.data)),
+        },
+      ],
     });
 
-    const responseBody = (await response.json().catch(() => ({}))) as OpenAIResponseBody;
+    const toolUseBlock = response.content.find(
+      (block): block is Anthropic.ToolUseBlock => block.type === "tool_use",
+    );
 
-    if (!response.ok) {
+    if (!toolUseBlock) {
       return {
         ok: false,
-        error: toErrorResponse("OPENAI_PROVIDER_ERROR"),
+        error: toErrorResponse("CLAUDE_REFUSAL"),
       };
     }
 
-    const parsedAnalysis = extractStructuredAnalysis(responseBody);
+    const parsed = analyzeSuccessSchema.safeParse(toolUseBlock.input);
 
-    if (!parsedAnalysis) {
+    if (!parsed.success) {
       return {
         ok: false,
-        error: toErrorResponse("OPENAI_REFUSAL", undefined, 502),
+        error: toErrorResponse("CLAUDE_REFUSAL"),
       };
     }
 
     return {
       ok: true,
-      data: parsedAnalysis,
+      data: parsed.data,
     };
   } catch {
     return {
       ok: false,
-      error: toErrorResponse("OPENAI_PROVIDER_ERROR"),
+      error: toErrorResponse("CLAUDE_PROVIDER_ERROR"),
     };
   }
-}
-
-function buildOpenAIRequestBody(input: YouTubeCollectResult, model: string) {
-  return {
-    model,
-    input: [
-      {
-        role: "system",
-        content: buildSystemPrompt(),
-      },
-      {
-        role: "user",
-        content: JSON.stringify(buildAnalysisInput(input)),
-      },
-    ],
-    text: {
-      format: {
-        type: "json_schema",
-        name: "channel_analysis",
-        strict: true,
-        schema: analysisJsonSchema,
-      },
-    },
-  };
 }
 
 function buildSystemPrompt() {
@@ -140,7 +115,7 @@ function buildSystemPrompt() {
     "핵심 질문은 '다음에 무엇을 만들까?'입니다.",
     "추상적인 조언보다 다음 영상 제작 결정, 반복할 패턴, 줄일 행동, 실행 체크리스트를 우선하세요.",
     "최근 공개 영상 sample size가 작거나 주요 통계가 누락되면 confidence를 낮추고 이유를 설명하세요.",
-    "반드시 제공된 JSON schema를 만족하는 JSON만 반환하세요.",
+    "반드시 제공된 tool의 input_schema를 만족하는 JSON만 반환하세요.",
   ].join("\n");
 }
 
@@ -174,56 +149,6 @@ function toVideoMetricSnapshot(video: YouTubeVideo) {
     duration: video.duration,
     engagementRate: getEngagementRate(video),
   };
-}
-
-function extractStructuredAnalysis(responseBody: OpenAIResponseBody): ChannelAnalysis | null {
-  if (responseBody.output_parsed) {
-    return parseCandidate(responseBody.output_parsed);
-  }
-
-  if (typeof responseBody.output_text === "string") {
-    return parseCandidateText(responseBody.output_text);
-  }
-
-  for (const outputItem of responseBody.output ?? []) {
-    for (const contentItem of outputItem.content ?? []) {
-      if (contentItem.type === "refusal" || contentItem.refusal) {
-        return null;
-      }
-
-      if (contentItem.parsed) {
-        const parsed = parseCandidate(contentItem.parsed);
-
-        if (parsed) {
-          return parsed;
-        }
-      }
-
-      if (typeof contentItem.text === "string") {
-        const parsed = parseCandidateText(contentItem.text);
-
-        if (parsed) {
-          return parsed;
-        }
-      }
-    }
-  }
-
-  return null;
-}
-
-function parseCandidateText(text: string): ChannelAnalysis | null {
-  try {
-    return parseCandidate(JSON.parse(text));
-  } catch {
-    return null;
-  }
-}
-
-function parseCandidate(candidate: unknown): ChannelAnalysis | null {
-  const parsed = analyzeSuccessSchema.safeParse(candidate);
-
-  return parsed.success ? parsed.data : null;
 }
 
 const analysisJsonSchema = {

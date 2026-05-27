@@ -1,6 +1,6 @@
 ---
 name: harness
-description: "/Users/jaeha/Projects/codex-live-demo에서 Harness 워크플로우를 사용하거나, phase/step 계획을 생성 또는 검토하거나, phases/* 파일을 생성하거나, scripts/execute.py를 실행하거나, 이전 /harness 명령을 언급할 때 사용한다."
+description: "Harness 워크플로우를 사용하거나, phase/step 계획을 생성 또는 검토하거나, phases/* 파일을 생성하거나, scripts/execute.py를 실행하거나, 이전 /harness 명령을 언급할 때 사용한다."
 ---
 
 # Harness 워크플로우
@@ -26,7 +26,7 @@ description: "/Users/jaeha/Projects/codex-live-demo에서 Harness 워크플로�
 Step 설계 규칙:
 
 1. **범위를 최소화한다**: 각 step은 하나의 layer 또는 module만 다뤄야 한다. 여러 module을 한 번에 수정해야 하는 step은 나눈다.
-2. **각 step을 독립 실행 가능하게 만든다**: 각 step은 독립된 Codex session에서 실행된다. 이전 채팅 맥락에 의존하지 말고, step 파일 안에 필요한 세부 정보를 모두 포함한다.
+2. **각 step을 독립 실행 가능하게 만든다**: 각 step은 독립된 Claude Code session에서 실행된다. 이전 채팅 맥락에 의존하지 말고, step 파일 안에 필요한 세부 정보를 모두 포함한다.
 3. **준비 작업을 강제한다**: session이 수정 전에 맥락을 읽도록 관련 문서 경로와 이전 step에서 생성 또는 변경된 파일을 나열한다.
 4. **전체 구현이 아니라 interface를 지정한다**: 함수, class, module signature와 핵심 제약을 제공한다. 특정 algorithm이 정확성에 필수인 경우가 아니라면 구현 세부사항은 실행 agent에게 맡긴다.
 5. **실행 가능한 acceptance criteria를 사용한다**: 모호한 문장보다 `npm run build`, `npm run test` 같은 command를 선호한다.
@@ -76,7 +76,7 @@ Task 세부 index다.
 
 규칙:
 
-- `project`: `AGENTS.md`에 있는 project 이름.
+- `project`: `CLAUDE.md`에 있는 project 이름.
 - `phase`: task name이며 directory name과 일치해야 한다.
 - `steps[].step`: 0부터 시작하는 step number.
 - `steps[].name`: kebab-case slug.
@@ -86,9 +86,9 @@ Status field:
 
 | 전환 | 기록되는 field | 작성 주체 |
 | --- | --- | --- |
-| to `completed` | `completed_at`, `summary` | Codex session이 `summary`를 쓰고, `execute.py`가 timestamp를 쓴다 |
-| to `error` | `failed_at`, `error_message` | Codex session이 message를 쓰고, `execute.py`가 timestamp를 쓴다 |
-| to `blocked` | `blocked_at`, `blocked_reason` | Codex session이 reason을 쓰고, `execute.py`가 timestamp를 쓴다 |
+| to `completed` | `completed_at`, `summary` | Claude Code session이 `summary`를 쓰고, `execute.py`가 timestamp를 쓴다 |
+| to `error` | `failed_at`, `error_message` | Claude Code session이 message를 쓰고, `execute.py`가 timestamp를 쓴다 |
+| to `blocked` | `blocked_at`, `blocked_reason` | Claude Code session이 reason을 쓰고, `execute.py`가 timestamp를 쓴다 |
 
 `summary`는 다음 step에 유용한 한 줄 설명이어야 하며, 생성한 파일, 변경한 파일, 핵심 결정을 포함한다.
 
@@ -128,7 +128,7 @@ npm run test
 2. Architecture checklist를 확인한다:
    - 작업이 `ARCHITECTURE.md`의 directory structure를 따르는가?
    - `ADR.md`의 stack decision 안에 머무르는가?
-   - `AGENTS.md`의 CRITICAL rule을 위반하지 않는가?
+   - `CLAUDE.md`의 CRITICAL rule을 위반하지 않는가?
 3. 이 step에 대해 `phases/{task-name}/index.json`을 업데이트한다:
    - 성공: `"status": "completed"`로 설정하고 `"summary": "one-line output summary"`를 추가한다.
    - 3회 수정 시도 후에도 실패: `"status": "error"`로 설정하고 `"error_message": "specific error"`를 추가한다.
@@ -152,7 +152,7 @@ python3 scripts/execute.py {task-name} --push
 `execute.py`가 처리하는 일:
 
 - `feat-{task-name}` branch 생성 및 checkout
-- `AGENTS.md`와 `docs/*.md`의 guardrail 주입
+- `CLAUDE.md`와 `docs/*.md`의 guardrail 주입 (CLAUDE.md 우선, 없으면 AGENTS.md)
 - 완료된 step summary를 이후 step prompt에 전달
 - 실패한 step을 이전 error message와 함께 최대 3회 재시도
 - code change와 metadata를 두 개의 commit으로 분리

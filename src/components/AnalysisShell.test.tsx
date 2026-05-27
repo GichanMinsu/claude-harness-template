@@ -144,7 +144,7 @@ describe("AnalysisShell", () => {
       jsonResponse(collectPayload),
       jsonResponse({
         error: {
-          code: "OPENAI_PROVIDER_ERROR",
+          code: "CLAUDE_PROVIDER_ERROR",
           message: "AI 분석 요청을 처리하지 못했습니다.",
         },
       }, 502),
