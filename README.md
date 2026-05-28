@@ -16,14 +16,23 @@ Next.js + TypeScript + Anthropic Claude API 조합에 TDD 가드, phase/step 자
 | 리뷰 스킬 | `.agents/skills/review/` | `/review` 체크리스트 |
 | 문서 템플릿 | `docs/` | PRD, ARCHITECTURE, ADR 스텁 |
 
+## 전제 조건
+
+| 도구 | 설치 방법 | 용도 |
+|---|---|---|
+| [Claude Code CLI](https://docs.anthropic.com/ko/docs/claude-code) | `npm install -g @anthropic-ai/claude-code` | `/init`, `/harness`, `/review` 스킬 실행 및 `execute.py` 내부 호출 |
+| Python 3.9+ | 시스템 설치 또는 `brew install python` | `scripts/execute.py` 실행 |
+| pytest | `pip3 install pytest` 또는 `pip3 install -r requirements.txt` | `scripts/test_execute.py` 실행 |
+
 ## 시작하기
 
-### 1. 레포 클론 후 Claude Code 열기
+### 1. 레포 클론 후 초기 설정
 
 ```bash
 git clone https://github.com/GichanMinsu/claude-harness-template.git my-app
 cd my-app
 git config core.hooksPath .githooks   # pre-commit 훅 활성화
+pip3 install -r requirements.txt      # pytest 설치
 ```
 
 ### 2. /init 으로 프로젝트 초기화
@@ -75,9 +84,10 @@ python3 scripts/execute.py {phase-dir}
 ## 검증 명령
 
 ```bash
-npm run lint
-npm run test
-npm run build
+npm run lint                          # ESLint
+npm run build                         # Next.js 프로덕션 빌드
+npm run test                          # Vitest (TypeScript 테스트)
+python3 -m pytest scripts/test_execute.py -q  # Python 테스트 (하네스 엔진)
 ```
 
 ## 하네스 워크플로우

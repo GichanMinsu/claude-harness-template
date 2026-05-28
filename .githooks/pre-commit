@@ -20,4 +20,11 @@ run_check lint
 run_check build
 run_check test
 
-echo "pre-commit: lint, build, and test passed"
+if python3 -m pytest --version >/dev/null 2>&1; then
+  echo "pre-commit: running python3 -m pytest"
+  python3 -m pytest scripts/test_execute.py -q
+else
+  echo "pre-commit: pytest not found — skipping Python tests (run: pip3 install pytest)" >&2
+fi
+
+echo "pre-commit: all checks passed"

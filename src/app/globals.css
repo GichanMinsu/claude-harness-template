@@ -1,9 +1,5 @@
 @import "tailwindcss";
 
-:root {
-  color-scheme: dark;
-}
-
 * {
   box-sizing: border-box;
 }
@@ -19,5 +15,4 @@ body {
     Arial,
     Helvetica,
     sans-serif;
-  background: #020617;
 }
