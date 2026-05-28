@@ -11,5 +11,3 @@ tsconfig.tsbuildinfo
 phases/**/phase*-output.json
 phases/**/step*-output.json
 
-# local automation outputs
-reports/youtube-analysis/

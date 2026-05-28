@@ -44,3 +44,9 @@ npm run build    # 프로덕션 빌드
 npm run lint     # ESLint
 npm run test     # 테스트
 ```
+
+## 초기 설정 (레포 클론 후 1회)
+```bash
+git config core.hooksPath .githooks   # pre-commit 훅 활성화 (lint + build + test)
+cp .env.example .env.local            # 환경변수 파일 생성
+```
