@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "YouTube Channel Insight",
-  description: "Public YouTube channel insight dashboard for content planning.",
+  title: "[PROJECT_NAME]",
+  description: "[Project description]",
 };
 
 export default function RootLayout({

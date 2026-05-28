@@ -1,5 +1,7 @@
-import { AnalysisShell } from "@/components/AnalysisShell";
-
 export default function Home() {
-  return <AnalysisShell />;
+  return (
+    <main className="flex min-h-screen items-center justify-center">
+      <p className="text-gray-500">[PROJECT_NAME]</p>
+    </main>
+  );
 }

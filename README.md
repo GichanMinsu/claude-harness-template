@@ -1,27 +1,50 @@
-# YouTube Channel Insight
+# Claude Harness Template
 
-YouTube Channel Insight는 채널 URL 하나로 공개 채널 정보와 최근 업로드 데이터를 수집하고, Claude AI 분석 결과를 대시보드와 실행 체크리스트로 보여주는 MVP입니다.
+Claude Code 기반 하네스 엔지니어링 스타터 템플릿.
 
-## 로컬 실행
+Next.js + TypeScript + Anthropic Claude API 조합에 TDD 가드, phase/step 자동 실행, 코드 리뷰 스킬이 미리 셋팅되어 있습니다.
+
+## 포함된 것
+
+| 항목 | 위치 | 설명 |
+|---|---|---|
+| 하네스 실행기 | `scripts/execute.py` | phase/step 단위 Claude Code 자동 실행 |
+| TDD 가드 훅 | `.claude/hooks/tdd-guard.sh` | 테스트 없는 구현 파일 수정 차단 |
+| Claude Code 설정 | `.claude/settings.json` | PreToolUse 훅 등록 |
+| 하네스 스킬 | `.agents/skills/harness/` | `/harness` 워크플로우 |
+| 리뷰 스킬 | `.agents/skills/review/` | `/review` 체크리스트 |
+| 문서 템플릿 | `docs/` | PRD, ARCHITECTURE, ADR 스텁 |
+
+## 시작하기
+
+### 1. 프로젝트 정의
+
+`CLAUDE.md`의 `[PROJECT_NAME]`과 플레이스홀더를 채운다.
+
+`docs/PRD.md`, `docs/ARCHITECTURE.md`, `docs/ADR.md`를 프로젝트에 맞게 작성한다.
+
+### 2. 환경 변수 설정
+
+`.env.local`을 생성하고 아래 값을 설정한다.
+
+```bash
+ANTHROPIC_API_KEY=your_anthropic_api_key
+CLAUDE_MODEL=claude-sonnet-4-6   # 선택값
+```
+
+### 3. 의존성 설치
 
 ```bash
 npm install
-npm run dev
 ```
 
-개발 서버는 기본적으로 `http://localhost:3000`에서 실행됩니다.
+### 4. Phase 설계 및 실행
 
-## 환경 변수
-
-`.env.local`에 아래 값을 설정합니다.
+Claude Code에서 `/harness`로 phase를 설계하고, 승인 후 실행한다.
 
 ```bash
-YOUTUBE_API_KEY=your_youtube_data_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
-CLAUDE_MODEL=claude-sonnet-4-6
+python3 scripts/execute.py {phase-dir}
 ```
-
-`CLAUDE_MODEL`은 선택값입니다. 설정하지 않으면 앱의 기본 모델(claude-sonnet-4-6)을 사용합니다.
 
 ## 검증 명령
 
@@ -31,32 +54,16 @@ npm run test
 npm run build
 ```
 
-## 로컬 자동화
+## 하네스 워크플로우
 
-개발 서버가 실행 중일 때 기존 앱 API route를 호출해 수집과 분석을 자동 실행할 수 있습니다.
-
-```bash
-npm run analyze:youtube -- --channel "@handle"
+```
+1. CLAUDE.md + docs/ 작성
+        ↓
+2. /harness 로 phase/step 설계
+        ↓
+3. python3 scripts/execute.py {phase}
+        ↓
+4. /review 로 결과 검토
 ```
 
-옵션:
-
-```bash
-npm run analyze:youtube -- \
-  --channel "@handle" \
-  --base-url "http://localhost:3000" \
-  --out-dir "reports/youtube-analysis" \
-  --timeout-ms 120000
-```
-
-- `YOUTUBE_CHANNEL_URL`과 `YOUTUBE_ANALYSIS_BASE_URL` 환경변수도 사용할 수 있습니다.
-- 결과는 `reports/youtube-analysis/latest.json`과 `reports/youtube-analysis/latest.md`에 생성됩니다.
-- 상태는 `success`, `collection_failed`, `analysis_failed`로 구분됩니다.
-- `analysis_failed`인 경우에도 수집된 YouTube 데이터는 `latest.json`에 유지됩니다.
-
-## MVP 범위
-
-- 지원 입력: `youtube.com/@handle`, `@handle`, `youtube.com/channel/UC...`, `UC...`
-- 수집: YouTube Data API v3 공개 채널 정보와 최근 공개 업로드 최대 50개
-- 분석: Anthropic Claude API Tool Use 기반 한국어 분석
-- 제외: 로그인, DB 저장, YouTube OAuth, YouTube Analytics API, 경쟁 채널 비교, 내보내기
+각 step은 독립된 Claude Code 세션에서 실행되며, TDD 가드가 테스트 없는 구현을 차단합니다. 실패한 step은 최대 3회 자동 재시도합니다.
